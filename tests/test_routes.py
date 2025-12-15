@@ -12,6 +12,7 @@ from tests.factories import AccountFactory
 from service.common import status  # HTTP Status Codes
 from service.models import db, Account, init_db
 from service.routes import app
+from service import talisman
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
@@ -19,6 +20,7 @@ DATABASE_URI = os.getenv(
 
 BASE_URL = "/accounts"
 
+HTTPS_ENVIRON = {'wsgi.url_scheme': 'https'}
 
 ######################################################################
 #  T E S T   C A S E S
@@ -33,6 +35,7 @@ class TestAccountService(TestCase):
         app.config["DEBUG"] = False
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
         app.logger.setLevel(logging.CRITICAL)
+        talisman.force_https = False
         init_db(app)
 
     @classmethod
@@ -196,3 +199,26 @@ class TestAccountService(TestCase):
     def test_delete_not_found(self):
         resp = self.client.delete("/accounts/0")
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_security_headers(self):
+        """Test that security headers are present"""
+        response = self.client.get(BASE_URL, environ_overrides=HTTPS_ENVIRON)
+    
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(response.headers.get('X-Frame-Options'), 'SAMEORIGIN')
+        self.assertEqual(response.headers.get('X-Content-Type-Options'), 'nosniff')
+        self.assertEqual(
+            response.headers.get('Content-Security-Policy'),
+            "default-src 'self'; object-src 'none'"
+        )
+        self.assertEqual(
+            response.headers.get('Referrer-Policy'),
+            'strict-origin-when-cross-origin'
+        )
+
+    def test_cors_headers(self):
+        """Test that CORS headers are present"""
+        response = self.client.get(BASE_URL, environ_overrides=HTTPS_ENVIRON)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), '*')
