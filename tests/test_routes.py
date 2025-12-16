@@ -25,6 +25,8 @@ HTTPS_ENVIRON = {'wsgi.url_scheme': 'https'}
 ######################################################################
 #  T E S T   C A S E S
 ######################################################################
+
+
 class TestAccountService(TestCase):
     """Account Service Tests"""
 
@@ -133,7 +135,6 @@ class TestAccountService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         return resp.get_json()
 
-
     def test_read_an_account(self):
         account = self._create_account()
         account_id = account["id"]
@@ -154,10 +155,10 @@ class TestAccountService(TestCase):
     def test_list_accounts(self):
         self._create_account()
         self._create_account()
-    
+
         resp = self.client.get("/accounts")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-    
+
         data = resp.get_json()
         self.assertIsInstance(data, list)
         self.assertGreaterEqual(len(data), 2)
@@ -203,7 +204,7 @@ class TestAccountService(TestCase):
     def test_security_headers(self):
         """Test that security headers are present"""
         response = self.client.get(BASE_URL, environ_overrides=HTTPS_ENVIRON)
-    
+
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(response.headers.get('X-Frame-Options'), 'SAMEORIGIN')
